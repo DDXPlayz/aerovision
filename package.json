@@ -1,0 +1,26 @@
+{
+  "name": "aerovision",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@anantam/ui": "*",
+    "three": "^0.160.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "framer-motion": "^12.42.2",
+    "lucide-react": "^0.344.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3"
+  }
+}
