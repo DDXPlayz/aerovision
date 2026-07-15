@@ -75,7 +75,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
         subject = new THREE.Group(); scene.add(subject);
         streamlines = new Streamlines(subject);
-        fetch('anantam-v1.stl').then(res => {
+        // Resolve against Vite's base URL ("/aerovision/") so it works from
+        // both "/aerovision" (cleanUrls, no trailing slash) and "/aerovision/".
+        // A bare relative path resolves to the site root on the slash-less URL → 404.
+        fetch(import.meta.env.BASE_URL + 'anantam-v1.stl').then(res => {
           if (!res.ok) throw new Error('Failed to fetch STL');
           return res.arrayBuffer();
         }).then(data => {
@@ -733,8 +736,56 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
       }
       function go(file) {
         if (!/\.(obj|glb|gltf|stl)$/i.test(file.name)) { uploadFail('Use an OBJ, GLB, GLTF or STL file'); return; }
-        runScan(() => loadModel(file).then(mesh => { setCar(mesh); enterStudio(file.name); }).catch(err => uploadFail((err && err.message) || 'Could not read that model')));
+        runScan(() => loadModel(file).then(mesh => { setCar(mesh); enterStudio(file.name); archiveAero(file.name); }).catch(err => uploadFail((err && err.message) || 'Could not read that model')));
       }
+      /* Internal archival only — best-effort, fire-and-forget. Sends a bundle
+         (metadata + aero metrics + a rendered thumbnail) to /api/archive after
+         results are shown. Never awaited, swallows every error, and shows
+         nothing to the user: if it fails for any reason (offline, server down,
+         Drive misconfigured), AeroVision is completely unaffected. */
+      function archiveAero(fileName) {
+        try {
+          var meta = {
+            fileName: fileName,
+            score: profile && profile.score,
+            cd: profile && profile.cd,
+            frontalAreaCm2: profile && profile.frontalAreaCm2,
+            runTime: profile && profile.runTime,
+            source: 'AeroVision web app'
+          };
+          var files = [
+            { name: 'analysis.json', mimeType: 'application/json', content: safeJson({ fileName: fileName, metrics: profile }) },
+            { name: 'metadata.json', mimeType: 'application/json', content: safeJson(meta) }
+          ];
+          var thumb = captureAeroThumbnail();
+          if (thumb) files.push({ name: 'thumbnail.webp', mimeType: 'image/webp', contentBase64: thumb });
+          fetch('/api/archive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tool: 'AeroVision', uploadId: makeArchiveId(), timestamp: new Date().toISOString(), meta: meta, files: files }),
+            keepalive: true
+          }).catch(function () { /* best-effort — ignore all failures */ });
+        } catch (e) { /* archival must never throw into the app */ }
+      }
+      function captureAeroThumbnail() {
+        try {
+          var src = renderer && renderer.domElement;
+          if (!src || !src.width || !src.height) return null;
+          try { renderer.render(scene, camera); } catch (e) { /* capture whatever is present */ }
+          var w = 640, h = Math.max(1, Math.round(640 * src.height / src.width));
+          var c = document.createElement('canvas'); c.width = w; c.height = h;
+          var ctx = c.getContext('2d'); if (!ctx) return null;
+          ctx.drawImage(src, 0, 0, w, h);
+          var url = c.toDataURL('image/webp', 0.72);
+          var comma = url.indexOf(',');
+          return comma >= 0 ? url.slice(comma + 1) : null;
+        } catch (e) { return null; }
+      }
+      function makeArchiveId() {
+        try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        return 'av-' + Date.now() + '-' + Math.floor(Math.random() * 1e9).toString(36);
+      }
+      function safeJson(v) { try { return JSON.stringify(v, null, 2); } catch (e) { return '{}'; } }
       function runScan(done) {
         const sc = document.getElementById('scanner'), fill = document.getElementById('scanFill'), pct = document.getElementById('scanPct'), step = document.getElementById('scanStep');
         sc.classList.add('on'); let p = 0, si = -1;
