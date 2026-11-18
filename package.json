@@ -9,12 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@anantam/ui": "*",
+    "@anantam/ui": "file:./ui",
     "three": "^0.160.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "framer-motion": "^12.42.2",
-    "lucide-react": "^0.344.0"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
