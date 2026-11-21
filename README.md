@@ -123,9 +123,16 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
-npm run build      # static output in dist/
+npm run build               # builds for /aerovision/, the production path
+VITE_BASE=/ npm run build   # builds for the root, e.g. to serve dist/ yourself
 npm run preview
 ```
+
+**On the base path.** Production is served from
+`tools.anantamracing.com/aerovision/`, so `vite.config.ts` defaults `base` to
+`/aerovision/` and a plain `npm run build` produces a `dist/` whose assets 404
+if you serve it at `/`. Set `VITE_BASE=/` to build for the root. The same
+applies to TechVerify and EvalScore.
 
 No environment variables, no API keys, no server. The sample car
 (`public/anantam-v1.stl`) loads on start, so there is something to look at before you
